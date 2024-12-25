@@ -303,6 +303,13 @@ def output_ui_variables():
 	ui_friendly_dictionary = {}
 	ui_friendly_dictionary["STATUS"] = "success"
 
+	# avoid divide by zero - electric vehicles have no fuel capacity
+	capacity = cr.get("FUEL_TOTAL_CAPACITY")
+	if capacity > 0:
+		fuel_percentage = (cr.get("FUEL_TOTAL_QUANTITY") / capacity) * 100
+	else:
+		fuel_percentage = 0.
+
 	# Fuel
 	fuel_percentage = (aq.get("FUEL_TOTAL_QUANTITY") / aq.get("FUEL_TOTAL_CAPACITY")) * 100
 	ui_friendly_dictionary["FUEL_PERCENTAGE"] = round(fuel_percentage)
