@@ -2,7 +2,12 @@ from flask import Flask, jsonify, render_template, request
 from SimConnect import *
 from time import sleep
 import random
+import sys
 
+debug = False
+print(sys.argv)
+if "-d" in sys.argv or "--debug" in sys.argv:
+	debug = True
 
 app = Flask(__name__)
 
@@ -477,4 +482,4 @@ def custom_emergency(emergency_type):
 	return text_to_return
 
 
-app.run(host='0.0.0.0', port=5000, debug=True)
+app.run(host='0.0.0.0', port=5000, debug=debug)
