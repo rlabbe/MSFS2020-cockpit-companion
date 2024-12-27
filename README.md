@@ -1,3 +1,11 @@
+# Fork
+
+I (Roger Labbe) have forked this to add some capabilities and to fix bugs.
+
+Original did not work with electric vehicles because there was a divide by zero for fuel %.
+
+So far I have added a way to start in debug mode (--debug on command line) and am changing the interface a bit to meet my needs/wants.
+
 # MSFS-2020 Cockpit Companion
 
 HTTP interface to view and control aircraft location and systems in Microsoft Flight Simulator 2020 (MSFS2020).
