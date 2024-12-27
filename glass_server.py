@@ -1,8 +1,12 @@
+import webbrowser
 from flask import Flask, jsonify, render_template, request
 from SimConnect import *
 from time import sleep
+import logging
 import random
 import sys
+from cache_request import CacheRequest
+
 
 debug = False
 print(sys.argv)
@@ -17,6 +21,8 @@ app = Flask(__name__)
 sm = SimConnect()
 ae = AircraftEvents(sm)
 aq = AircraftRequests(sm, _time=10)
+cr = CacheRequest(aq)
+
 
 # Create request holders
 
@@ -310,56 +316,55 @@ def output_ui_variables():
 
 	# avoid divide by zero - electric vehicles have no fuel capacity
 	capacity = cr.get("FUEL_TOTAL_CAPACITY")
-	if capacity > 0:
+	if capacity is not None and capacity > 0:
 		fuel_percentage = (cr.get("FUEL_TOTAL_QUANTITY") / capacity) * 100
 	else:
 		fuel_percentage = 0.
 
 	# Fuel
-	fuel_percentage = (aq.get("FUEL_TOTAL_QUANTITY") / aq.get("FUEL_TOTAL_CAPACITY")) * 100
 	ui_friendly_dictionary["FUEL_PERCENTAGE"] = round(fuel_percentage)
-	ui_friendly_dictionary["AIRSPEED_INDICATE"] = round(aq.get("AIRSPEED_INDICATED"))
-	ui_friendly_dictionary["ALTITUDE"] = thousandify(round(aq.get("PLANE_ALTITUDE")))
+	ui_friendly_dictionary["AIRSPEED_INDICATE"] = round(cr.get("AIRSPEED_INDICATED"))
+	ui_friendly_dictionary["ALTITUDE"] = thousandify(round(cr.get("PLANE_ALTITUDE")))
 
 	# Control surfaces
-	if aq.get("GEAR_HANDLE_POSITION") == 1:
+	if cr.get("GEAR_HANDLE_POSITION") == 1:
 		ui_friendly_dictionary["GEAR_HANDLE_POSITION"] = "DOWN"
 	else:
 		ui_friendly_dictionary["GEAR_HANDLE_POSITION"] = "UP"
-	ui_friendly_dictionary["FLAPS_HANDLE_PERCENT"] = round(aq.get("FLAPS_HANDLE_PERCENT") * 100)
+	ui_friendly_dictionary["FLAPS_HANDLE_PERCENT"] = round(cr.get("FLAPS_HANDLE_PERCENT") * 100)
 
-	ui_friendly_dictionary["ELEVATOR_TRIM_PCT"] = round(aq.get("ELEVATOR_TRIM_PCT") * 100)
-	ui_friendly_dictionary["RUDDER_TRIM_PCT"] = round(aq.get("RUDDER_TRIM_PCT") * 100)
+	ui_friendly_dictionary["ELEVATOR_TRIM_PCT"] = round(cr.get("ELEVATOR_TRIM_PCT") * 100)
+	ui_friendly_dictionary["RUDDER_TRIM_PCT"] = round(cr.get("RUDDER_TRIM_PCT") * 100)
 
 	# Navigation
-	ui_friendly_dictionary["LATITUDE"] = aq.get("PLANE_LATITUDE")
-	ui_friendly_dictionary["LONGITUDE"] = aq.get("PLANE_LONGITUDE")
-	ui_friendly_dictionary["MAGNETIC_COMPASS"] = round(aq.get("MAGNETIC_COMPASS"))
-	ui_friendly_dictionary["VERTICAL_SPEED"] = round(aq.get("VERTICAL_SPEED"))
+	ui_friendly_dictionary["LATITUDE"] = cr.get("PLANE_LATITUDE")
+	ui_friendly_dictionary["LONGITUDE"] = cr.get("PLANE_LONGITUDE")
+	ui_friendly_dictionary["MAGNETIC_COMPASS"] = round(cr.get("MAGNETIC_COMPASS"))
+	ui_friendly_dictionary["VERTICAL_SPEED"] = round(cr.get("VERTICAL_SPEED"))
 
 	# Autopilot
-	ui_friendly_dictionary["AUTOPILOT_MASTER"] = aq.get("AUTOPILOT_MASTER")
-	ui_friendly_dictionary["AUTOPILOT_NAV_SELECTED"] = aq.get("AUTOPILOT_NAV_SELECTED")
-	ui_friendly_dictionary["AUTOPILOT_WING_LEVELER"] = aq.get("AUTOPILOT_WING_LEVELER")
-	ui_friendly_dictionary["AUTOPILOT_HEADING_LOCK"] = aq.get("AUTOPILOT_HEADING_LOCK")
-	ui_friendly_dictionary["AUTOPILOT_HEADING_LOCK_DIR"] = round(aq.get("AUTOPILOT_HEADING_LOCK_DIR"))
-	ui_friendly_dictionary["AUTOPILOT_ALTITUDE_LOCK"] = aq.get("AUTOPILOT_ALTITUDE_LOCK")
-	ui_friendly_dictionary["AUTOPILOT_ALTITUDE_LOCK_VAR"] = thousandify(round(aq.get("AUTOPILOT_ALTITUDE_LOCK_VAR")))
-	ui_friendly_dictionary["AUTOPILOT_ATTITUDE_HOLD"] = aq.get("AUTOPILOT_ATTITUDE_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_GLIDESLOPE_HOLD"] = aq.get("AUTOPILOT_GLIDESLOPE_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_APPROACH_HOLD"] = aq.get("AUTOPILOT_APPROACH_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_BACKCOURSE_HOLD"] = aq.get("AUTOPILOT_BACKCOURSE_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_VERTICAL_HOLD"] = aq.get("AUTOPILOT_VERTICAL_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_VERTICAL_HOLD_VAR"] = aq.get("AUTOPILOT_VERTICAL_HOLD_VAR")
-	ui_friendly_dictionary["AUTOPILOT_PITCH_HOLD"] = aq.get("AUTOPILOT_PITCH_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_PITCH_HOLD_REF"] = aq.get("AUTOPILOT_PITCH_HOLD_REF")
-	ui_friendly_dictionary["AUTOPILOT_FLIGHT_DIRECTOR_ACTIVE"] = aq.get("AUTOPILOT_FLIGHT_DIRECTOR_ACTIVE")
-	ui_friendly_dictionary["AUTOPILOT_AIRSPEED_HOLD"] = aq.get("AUTOPILOT_AIRSPEED_HOLD")
-	ui_friendly_dictionary["AUTOPILOT_AIRSPEED_HOLD_VAR"] = round(aq.get("AUTOPILOT_AIRSPEED_HOLD_VAR"))
+	ui_friendly_dictionary["AUTOPILOT_MASTER"] = cr.get("AUTOPILOT_MASTER")
+	ui_friendly_dictionary["AUTOPILOT_NAV_SELECTED"] = cr.get("AUTOPILOT_NAV_SELECTED")
+	ui_friendly_dictionary["AUTOPILOT_WING_LEVELER"] = cr.get("AUTOPILOT_WING_LEVELER")
+	ui_friendly_dictionary["AUTOPILOT_HEADING_LOCK"] = cr.get("AUTOPILOT_HEADING_LOCK")
+	ui_friendly_dictionary["AUTOPILOT_HEADING_LOCK_DIR"] = round(cr.get("AUTOPILOT_HEADING_LOCK_DIR"))
+	ui_friendly_dictionary["AUTOPILOT_ALTITUDE_LOCK"] = cr.get("AUTOPILOT_ALTITUDE_LOCK")
+	ui_friendly_dictionary["AUTOPILOT_ALTITUDE_LOCK_VAR"] = thousandify(round(cr.get("AUTOPILOT_ALTITUDE_LOCK_VAR")))
+	ui_friendly_dictionary["AUTOPILOT_ATTITUDE_HOLD"] = cr.get("AUTOPILOT_ATTITUDE_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_GLIDESLOPE_HOLD"] = cr.get("AUTOPILOT_GLIDESLOPE_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_APPROACH_HOLD"] = cr.get("AUTOPILOT_APPROACH_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_BACKCOURSE_HOLD"] = cr.get("AUTOPILOT_BACKCOURSE_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_VERTICAL_HOLD"] = cr.get("AUTOPILOT_VERTICAL_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_VERTICAL_HOLD_VAR"] = cr.get("AUTOPILOT_VERTICAL_HOLD_VAR")
+	ui_friendly_dictionary["AUTOPILOT_PITCH_HOLD"] = cr.get("AUTOPILOT_PITCH_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_PITCH_HOLD_REF"] = cr.get("AUTOPILOT_PITCH_HOLD_REF")
+	ui_friendly_dictionary["AUTOPILOT_FLIGHT_DIRECTOR_ACTIVE"] = cr.get("AUTOPILOT_FLIGHT_DIRECTOR_ACTIVE")
+	ui_friendly_dictionary["AUTOPILOT_AIRSPEED_HOLD"] = cr.get("AUTOPILOT_AIRSPEED_HOLD")
+	ui_friendly_dictionary["AUTOPILOT_AIRSPEED_HOLD_VAR"] = round(cr.get("AUTOPILOT_AIRSPEED_HOLD_VAR"))
 
 	# Cabin
-	ui_friendly_dictionary["CABIN_SEATBELTS_ALERT_SWITCH"] = aq.get("CABIN_SEATBELTS_ALERT_SWITCH")
-	ui_friendly_dictionary["CABIN_NO_SMOKING_ALERT_SWITCH"] = aq.get("CABIN_NO_SMOKING_ALERT_SWITCH")
+	ui_friendly_dictionary["CABIN_SEATBELTS_ALERT_SWITCH"] = cr.get("CABIN_SEATBELTS_ALERT_SWITCH")
+	ui_friendly_dictionary["CABIN_NO_SMOKING_ALERT_SWITCH"] = cr.get("CABIN_NO_SMOKING_ALERT_SWITCH")
 
 	return jsonify(ui_friendly_dictionary)
 
@@ -369,7 +374,7 @@ def output_json_dataset(dataset_name):
 	dataset_map = {}  #I have renamed map to dataset_map as map is used elsewhere
 	data_dictionary = get_dataset(dataset_name)
 	for datapoint_name in data_dictionary:
-		dataset_map[datapoint_name] = aq.get(datapoint_name)
+		dataset_map[datapoint_name] = cr.get(datapoint_name)
 	return jsonify(dataset_map)
 
 
@@ -381,7 +386,7 @@ def get_datapoint(datapoint_name, index=None):
 		if dp is not None:
 			dp.setIndex(int(index))
 
-	return aq.get(datapoint_name)
+	return cr.get(datapoint_name)
 
 
 @app.route('/datapoint/<datapoint_name>/get', methods=["GET"])
@@ -470,7 +475,7 @@ def custom_emergency(emergency_type):
 
 	if emergency_type == "random_engine_fire":
 		# Calculate number of engines
-		number_of_engines = aq.get("NUMBER_OF_ENGINES")
+		number_of_engines = cr.get("NUMBER_OF_ENGINES")
 
 		if number_of_engines < 0: return "error, no engines found - is sim running?"
 		engine_to_set_on_fire = random.randint(1,number_of_engines)
@@ -482,4 +487,5 @@ def custom_emergency(emergency_type):
 	return text_to_return
 
 
+webbrowser.open("http://localhost:5000")
 app.run(host='0.0.0.0', port=5000, debug=debug)
